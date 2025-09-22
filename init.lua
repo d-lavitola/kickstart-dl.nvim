@@ -91,7 +91,7 @@ vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
 -- Set to true if you have a Nerd Font installed and selected in the terminal
-vim.g.have_nerd_font = false
+vim.g.have_nerd_font = true
 
 -- [[ Setting options ]]
 -- See `:help vim.o`
@@ -175,6 +175,7 @@ vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
 
 -- Diagnostic keymaps
 vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
+vim.keymap.set('n', '<leader>e', vim.diagnostic.open_float, { desc = 'Show diagnostic [E]rror message' })
 
 -- Exit terminal mode in the builtin terminal with a shortcut that is a bit easier
 -- for people to discover. Otherwise, you normally need to press <C-\><C-n>, which
@@ -248,7 +249,6 @@ rtp:prepend(lazypath)
 require('lazy').setup({
   -- NOTE: Plugins can be added with a link (or for a github repo: 'owner/repo' link).
   'NMAC427/guess-indent.nvim', -- Detect tabstop and shiftwidth automatically
-
   -- NOTE: Plugins can also be added by using a table,
   -- with the first argument being the link and the following
   -- keys can be used to configure plugin behavior/loading/etc.
@@ -283,6 +283,40 @@ require('lazy').setup({
       },
     },
   },
+  {
+    'sindrets/diffview.nvim',
+    config = function()
+      -- Keymaps for Diffview
+      vim.keymap.set('n', '<leader>gd', ':DiffviewOpen<CR>', { desc = 'Open Diffview' })
+      vim.keymap.set('n', '<leader>gD', ':DiffviewClose<CR>', { desc = 'Close Diffview' })
+    end,
+  },
+  {
+    'tpope/vim-fugitive',
+    config = function()
+      -- Keymaps for Fugitive
+      vim.keymap.set('n', '<leader>gs', ':Git<CR>', { desc = 'Open Git Status' })
+      vim.keymap.set('n', '<leader>gc', ':Git commit<CR>', { desc = 'Git Commit' })
+      vim.keymap.set('n', '<leader>gp', ':Git push<CR>', { desc = 'Git Push' })
+      vim.keymap.set('n', '<leader>gpl', ':Git pull<CR>', { desc = 'Git Pull' })
+    end,
+  },
+  {
+    'NeogitOrg/neogit',
+    dependencies = {
+      'nvim-lua/plenary.nvim', -- Required dependency
+      'sindrets/diffview.nvim',
+      'nvim-telescope/telescope.nvim',
+    },
+    config = function()
+      require('neogit').setup {
+        integrations = {
+          diffview = true,
+        },
+      }
+      vim.keymap.set('n', '<leader>gs', ':Telescope neogit<CR>', { desc = 'Neogit Status' })
+    end,
+  },
 
   -- NOTE: Plugins can also be configured to run Lua code when they are loaded.
   --
@@ -297,7 +331,6 @@ require('lazy').setup({
   --
   -- Then, because we use the `opts` key (recommended), the configuration runs
   -- after the plugin has been loaded as `require(MODULE).setup(opts)`.
-
   { -- Useful plugin to show you pending keybinds.
     'folke/which-key.nvim',
     event = 'VimEnter', -- Sets the loading event to 'VimEnter'
@@ -362,7 +395,6 @@ require('lazy').setup({
     'nvim-telescope/telescope.nvim',
     event = 'VimEnter',
     dependencies = {
-      'nvim-lua/plenary.nvim',
       { -- If encountering errors, see telescope-fzf-native README for installation instructions
         'nvim-telescope/telescope-fzf-native.nvim',
 
@@ -379,7 +411,7 @@ require('lazy').setup({
       { 'nvim-telescope/telescope-ui-select.nvim' },
 
       -- Useful for getting pretty icons, but requires a Nerd Font.
-      { 'nvim-tree/nvim-web-devicons', enabled = vim.g.have_nerd_font },
+      -- { 'nvim-tree/nvim-web-devicons', enabled = vim.g.have_nerd_font },
     },
     config = function()
       -- Telescope is a fuzzy finder that comes with a lot of different things that
@@ -459,6 +491,11 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>sn', function()
         builtin.find_files { cwd = vim.fn.stdpath 'config' }
       end, { desc = '[S]earch [N]eovim files' })
+
+      -- Search in current working directory only
+      vim.keymap.set('n', '<leader>sp', function()
+        builtin.live_grep { cwd = vim.fn.getcwd() }
+      end, { desc = '[S]earch [P]roject (cwd)' })
     end,
   },
 
@@ -673,7 +710,7 @@ require('lazy').setup({
       local servers = {
         -- clangd = {},
         -- gopls = {},
-        -- pyright = {},
+        pyright = {},
         -- rust_analyzer = {},
         -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
         --
@@ -681,7 +718,7 @@ require('lazy').setup({
         --    https://github.com/pmizio/typescript-tools.nvim
         --
         -- But for many setups, the LSP (`ts_ls`) will work just fine
-        -- ts_ls = {},
+        ts_ls = {},
         --
 
         lua_ls = {
@@ -698,13 +735,130 @@ require('lazy').setup({
             },
           },
         },
+        vtsls = {
+          -- explicitly add default filetypes, so that we can extend
+          -- them in related extras
+          filetypes = {
+            'javascript',
+            'javascriptreact',
+            'javascript.jsx',
+            'typescript',
+            'typescriptreact',
+            'typescript.tsx',
+          },
+          settings = {
+            complete_function_calls = true,
+            vtsls = {
+              enableMoveToFileCodeAction = true,
+              autoUseWorkspaceTsdk = true,
+              experimental = {
+                maxInlayHintLength = 30,
+                completion = {
+                  enableServerSideFuzzyMatch = true,
+                },
+              },
+            },
+            typescript = {
+              updateImportsOnFileMove = { enabled = 'always' },
+              suggest = {
+                completeFunctionCalls = true,
+              },
+              inlayHints = {
+                enumMemberValues = { enabled = true },
+                functionLikeReturnTypes = { enabled = true },
+                parameterNames = { enabled = 'literals' },
+                parameterTypes = { enabled = true },
+                propertyDeclarationTypes = { enabled = true },
+                variableTypes = { enabled = false },
+              },
+            },
+          },
+          keys = {
+            {
+              'gD',
+              function()
+                local params = vim.lsp.util.make_position_params()
+                vim.lsp.buf.execute_command {
+                  command = 'typescript.goToSourceDefinition',
+                  arguments = { params.textDocument.uri, params.position },
+                }
+              end,
+              desc = 'Goto Source Definition',
+            },
+            {
+              'gR',
+              function()
+                vim.lsp.buf.execute_command {
+                  command = 'typescript.findAllFileReferences',
+                  arguments = { vim.uri_from_bufnr(0) },
+                }
+              end,
+              desc = 'File References',
+            },
+            {
+              '<leader>co',
+              function()
+                vim.lsp.buf.code_action {
+                  apply = true,
+                  filter = function(action)
+                    return action.kind == 'source.organizeImports'
+                  end,
+                }
+              end,
+              desc = 'Organize Imports',
+            },
+            {
+              '<leader>cM',
+              function()
+                vim.lsp.buf.code_action {
+                  apply = true,
+                  filter = function(action)
+                    return action.kind == 'source.addMissingImports.ts'
+                  end,
+                }
+              end,
+              desc = 'Add missing imports',
+            },
+            {
+              '<leader>cu',
+              function()
+                vim.lsp.buf.code_action {
+                  apply = true,
+                  filter = function(action)
+                    return action.kind == 'source.removeUnused.ts'
+                  end,
+                }
+              end,
+              desc = 'Remove unused imports',
+            },
+            {
+              '<leader>cD',
+              function()
+                vim.lsp.buf.code_action {
+                  apply = true,
+                  filter = function(action)
+                    return action.kind == 'source.fixAll.ts'
+                  end,
+                }
+              end,
+              desc = 'Fix all diagnostics',
+            },
+            {
+              '<leader>cV',
+              function()
+                vim.lsp.buf.execute_command { command = 'typescript.selectTypeScriptVersion' }
+              end,
+              desc = 'Select TS workspace version',
+            },
+          },
+        },
       }
 
       -- Ensure the servers and tools above are installed
       --
       -- To check the current status of installed tools and/or manually install
       -- other tools, you can run
-      --    :Mason
+      -- :Mason
       --
       -- You can press `g?` for help in this menu.
       --
@@ -716,10 +870,14 @@ require('lazy').setup({
       local ensure_installed = vim.tbl_keys(servers or {})
       vim.list_extend(ensure_installed, {
         'stylua', -- Used to format Lua code
+        'ktlint',
+        'black',
+        'eslint-lsp',
       })
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
       require('mason-lspconfig').setup {
+        automatic_enable = true,
         ensure_installed = {}, -- explicitly set to an empty table (Kickstart populates installs via mason-tool-installer)
         automatic_installation = false,
         handlers = {
@@ -769,10 +927,10 @@ require('lazy').setup({
       formatters_by_ft = {
         lua = { 'stylua' },
         -- Conform can also run multiple formatters sequentially
-        -- python = { "isort", "black" },
+        python = { 'isort', 'black' },
         --
         -- You can use 'stop_after_first' to run the first available formatter from the list
-        -- javascript = { "prettierd", "prettier", stop_after_first = true },
+        javascript = { 'prettierd', 'prettier', stop_after_first = true },
       },
     },
   },
@@ -883,18 +1041,64 @@ require('lazy').setup({
     -- If you want to see what colorschemes are already installed, you can use `:Telescope colorscheme`.
     'folke/tokyonight.nvim',
     priority = 1000, -- Make sure to load this before all the other start plugins.
+  },
+  {
+    'catppuccin/nvim',
+    name = 'catppuccin',
+    priority = 1000,
     config = function()
       ---@diagnostic disable-next-line: missing-fields
-      require('tokyonight').setup {
-        styles = {
-          comments = { italic = false }, -- Disable italics in comments
+      require('catppuccin').setup {
+        flavour = 'auto', -- latte, frappe, macchiato, mocha
+        background = { -- :h background
+          light = 'latte',
+          dark = 'mocha',
+        },
+        transparent_background = true, -- disables setting the background color.
+        show_end_of_buffer = false, -- shows the '~' characters after the end of buffers
+        term_colors = false, -- sets terminal colors (e.g. `g:terminal_color_0`)
+        dim_inactive = {
+          enabled = false, -- dims the background color of inactive window
+          shade = 'dark',
+          percentage = 0.15, -- percentage of the shade to apply to the inactive window
+        },
+        no_italic = false, -- Force no italic
+        no_bold = false, -- Force no bold
+        no_underline = false, -- Force no underline
+        styles = { -- Handles the styles of general hi groups (see `:h highlight-args`):
+          comments = { 'italic' }, -- Change the style of comments
+          conditionals = { 'italic' },
+          loops = {},
+          functions = {},
+          keywords = {},
+          strings = {},
+          variables = {},
+          numbers = {},
+          booleans = {},
+          properties = {},
+          types = {},
+          operators = {},
+          -- miscs = {}, -- Uncomment to turn off hard-coded styles
+        },
+        color_overrides = {},
+        custom_highlights = {},
+        default_integrations = true,
+        integrations = {
+          cmp = true,
+          gitsigns = true,
+          nvimtree = true,
+          treesitter = true,
+          notify = false,
+          mini = {
+            enabled = true,
+            indentscope_color = '',
+          },
+          -- For more plugins integrations please scroll down (https://github.com/catppuccin/nvim#integrations)
         },
       }
 
-      -- Load the colorscheme here.
-      -- Like many other themes, this one has different styles, and you could load
-      -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
-      vim.cmd.colorscheme 'tokyonight-night'
+      -- setup must be called before loading
+      vim.cmd.colorscheme 'catppuccin'
     end,
   },
 
@@ -944,7 +1148,24 @@ require('lazy').setup({
     main = 'nvim-treesitter.configs', -- Sets main module to use for opts
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
     opts = {
-      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' },
+      ensure_installed = {
+        'bash',
+        'c',
+        'diff',
+        'html',
+        'lua',
+        'luadoc',
+        'markdown',
+        'markdown_inline',
+        'query',
+        'vim',
+        'vimdoc',
+        'javascript',
+        'typescript',
+        'java',
+        'kotlin',
+        'python',
+      },
       -- Autoinstall languages that are not installed
       auto_install = true,
       highlight = {
@@ -973,18 +1194,18 @@ require('lazy').setup({
   --  Here are some example plugins that I've included in the Kickstart repository.
   --  Uncomment any of the lines below to enable them (you will need to restart nvim).
   --
-  -- require 'kickstart.plugins.debug',
+  require 'kickstart.plugins.debug',
   -- require 'kickstart.plugins.indent_line',
-  -- require 'kickstart.plugins.lint',
-  -- require 'kickstart.plugins.autopairs',
+  require 'kickstart.plugins.lint',
+  require 'kickstart.plugins.autopairs',
   -- require 'kickstart.plugins.neo-tree',
-  -- require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
+  require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
 
   -- NOTE: The import below can automatically add your own plugins, configuration, etc from `lua/custom/plugins/*.lua`
   --    This is the easiest way to modularize your config.
   --
   --  Uncomment the following line and add your plugins to `lua/custom/plugins/*.lua` to get going.
-  -- { import = 'custom.plugins' },
+  { import = 'custom.plugins' },
   --
   -- For additional information with loading, sourcing and examples see `:help lazy.nvim-🔌-plugin-spec`
   -- Or use telescope!
