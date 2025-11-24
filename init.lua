@@ -283,40 +283,6 @@ require('lazy').setup({
       },
     },
   },
-  {
-    'sindrets/diffview.nvim',
-    config = function()
-      -- Keymaps for Diffview
-      vim.keymap.set('n', '<leader>gd', ':DiffviewOpen<CR>', { desc = 'Open Diffview' })
-      vim.keymap.set('n', '<leader>gD', ':DiffviewClose<CR>', { desc = 'Close Diffview' })
-    end,
-  },
-  {
-    'tpope/vim-fugitive',
-    config = function()
-      -- Keymaps for Fugitive
-      vim.keymap.set('n', '<leader>gs', ':Git<CR>', { desc = 'Open Git Status' })
-      vim.keymap.set('n', '<leader>gc', ':Git commit<CR>', { desc = 'Git Commit' })
-      vim.keymap.set('n', '<leader>gp', ':Git push<CR>', { desc = 'Git Push' })
-      vim.keymap.set('n', '<leader>gpl', ':Git pull<CR>', { desc = 'Git Pull' })
-    end,
-  },
-  {
-    'NeogitOrg/neogit',
-    dependencies = {
-      'nvim-lua/plenary.nvim', -- Required dependency
-      'sindrets/diffview.nvim',
-      'nvim-telescope/telescope.nvim',
-    },
-    config = function()
-      require('neogit').setup {
-        integrations = {
-          diffview = true,
-        },
-      }
-      vim.keymap.set('n', '<leader>gs', ':Telescope neogit<CR>', { desc = 'Neogit Status' })
-    end,
-  },
 
   -- NOTE: Plugins can also be configured to run Lua code when they are loaded.
   --
@@ -331,6 +297,7 @@ require('lazy').setup({
   --
   -- Then, because we use the `opts` key (recommended), the configuration runs
   -- after the plugin has been loaded as `require(MODULE).setup(opts)`.
+
   { -- Useful plugin to show you pending keybinds.
     'folke/which-key.nvim',
     event = 'VimEnter', -- Sets the loading event to 'VimEnter'
@@ -377,6 +344,7 @@ require('lazy').setup({
 
       -- Document existing key chains
       spec = {
+        { '<leader>c', group = '[C]ode' },
         { '<leader>s', group = '[S]earch' },
         { '<leader>t', group = '[T]oggle' },
         { '<leader>h', group = 'Git [H]unk', mode = { 'n', 'v' } },
@@ -491,11 +459,6 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>sn', function()
         builtin.find_files { cwd = vim.fn.stdpath 'config' }
       end, { desc = '[S]earch [N]eovim files' })
-
-      -- Search in current working directory only
-      vim.keymap.set('n', '<leader>sp', function()
-        builtin.live_grep { cwd = vim.fn.getcwd() }
-      end, { desc = '[S]earch [P]roject (cwd)' })
     end,
   },
 
@@ -609,6 +572,41 @@ require('lazy').setup({
           --  the definition of its *type*, not where it was *defined*.
           map('grt', require('telescope.builtin').lsp_type_definitions, '[G]oto [T]ype Definition')
 
+          -- TypeScript specific keybindings
+          -- These commands are available when using vtsls or ts_ls
+          if vim.bo[event.buf].filetype == 'typescript' or vim.bo[event.buf].filetype == 'typescriptreact'
+             or vim.bo[event.buf].filetype == 'javascript' or vim.bo[event.buf].filetype == 'javascriptreact' then
+            map('<leader>co', function()
+              vim.lsp.buf.code_action({
+                apply = true,
+                context = {
+                  only = { 'source.organizeImports' },
+                  diagnostics = {},
+                },
+              })
+            end, '[C]ode [O]rganize Imports')
+
+            map('<leader>cR', function()
+              vim.lsp.buf.code_action({
+                apply = true,
+                context = {
+                  only = { 'source.removeUnused' },
+                  diagnostics = {},
+                },
+              })
+            end, '[C]ode [R]emove Unused Imports')
+
+            map('<leader>cA', function()
+              vim.lsp.buf.code_action({
+                apply = true,
+                context = {
+                  only = { 'source.addMissingImports.ts' },
+                  diagnostics = {},
+                },
+              })
+            end, '[C]ode [A]dd Missing Imports')
+          end
+
           -- This function resolves a difference between neovim nightly (version 0.11) and stable (version 0.10)
           ---@param client vim.lsp.Client
           ---@param method vim.lsp.protocol.Method
@@ -717,9 +715,7 @@ require('lazy').setup({
         -- Some languages (like typescript) have entire language plugins that can be useful:
         --    https://github.com/pmizio/typescript-tools.nvim
         --
-        -- But for many setups, the LSP (`ts_ls`) will work just fine
-        ts_ls = {},
-        --
+        -- Using vtsls for TypeScript (more modern and feature-rich than ts_ls)
 
         lua_ls = {
           -- cmd = { ... },
@@ -736,8 +732,6 @@ require('lazy').setup({
           },
         },
         vtsls = {
-          -- explicitly add default filetypes, so that we can extend
-          -- them in related extras
           filetypes = {
             'javascript',
             'javascriptreact',
@@ -752,7 +746,6 @@ require('lazy').setup({
               enableMoveToFileCodeAction = true,
               autoUseWorkspaceTsdk = true,
               experimental = {
-                maxInlayHintLength = 30,
                 completion = {
                   enableServerSideFuzzyMatch = true,
                 },
@@ -772,83 +765,19 @@ require('lazy').setup({
                 variableTypes = { enabled = false },
               },
             },
-          },
-          keys = {
-            {
-              'gD',
-              function()
-                local params = vim.lsp.util.make_position_params()
-                vim.lsp.buf.execute_command {
-                  command = 'typescript.goToSourceDefinition',
-                  arguments = { params.textDocument.uri, params.position },
-                }
-              end,
-              desc = 'Goto Source Definition',
-            },
-            {
-              'gR',
-              function()
-                vim.lsp.buf.execute_command {
-                  command = 'typescript.findAllFileReferences',
-                  arguments = { vim.uri_from_bufnr(0) },
-                }
-              end,
-              desc = 'File References',
-            },
-            {
-              '<leader>co',
-              function()
-                vim.lsp.buf.code_action {
-                  apply = true,
-                  filter = function(action)
-                    return action.kind == 'source.organizeImports'
-                  end,
-                }
-              end,
-              desc = 'Organize Imports',
-            },
-            {
-              '<leader>cM',
-              function()
-                vim.lsp.buf.code_action {
-                  apply = true,
-                  filter = function(action)
-                    return action.kind == 'source.addMissingImports.ts'
-                  end,
-                }
-              end,
-              desc = 'Add missing imports',
-            },
-            {
-              '<leader>cu',
-              function()
-                vim.lsp.buf.code_action {
-                  apply = true,
-                  filter = function(action)
-                    return action.kind == 'source.removeUnused.ts'
-                  end,
-                }
-              end,
-              desc = 'Remove unused imports',
-            },
-            {
-              '<leader>cD',
-              function()
-                vim.lsp.buf.code_action {
-                  apply = true,
-                  filter = function(action)
-                    return action.kind == 'source.fixAll.ts'
-                  end,
-                }
-              end,
-              desc = 'Fix all diagnostics',
-            },
-            {
-              '<leader>cV',
-              function()
-                vim.lsp.buf.execute_command { command = 'typescript.selectTypeScriptVersion' }
-              end,
-              desc = 'Select TS workspace version',
+            javascript = {
+              updateImportsOnFileMove = { enabled = 'always' },
+              suggest = {
+                completeFunctionCalls = true,
+              },
+              inlayHints = {
+                enumMemberValues = { enabled = true },
+                functionLikeReturnTypes = { enabled = true },
+                parameterNames = { enabled = 'literals' },
+                parameterTypes = { enabled = true },
+                propertyDeclarationTypes = { enabled = true },
+                variableTypes = { enabled = false },
+              },
             },
           },
         },
@@ -858,7 +787,7 @@ require('lazy').setup({
       --
       -- To check the current status of installed tools and/or manually install
       -- other tools, you can run
-      -- :Mason
+      --    :Mason
       --
       -- You can press `g?` for help in this menu.
       --
@@ -927,10 +856,10 @@ require('lazy').setup({
       formatters_by_ft = {
         lua = { 'stylua' },
         -- Conform can also run multiple formatters sequentially
-        python = { 'isort', 'black' },
+        python = { "isort", "black" },
         --
         -- You can use 'stop_after_first' to run the first available formatter from the list
-        javascript = { 'prettierd', 'prettier', stop_after_first = true },
+        javascript = { "prettierd", "prettier", stop_after_first = true },
       },
     },
   },
@@ -1148,8 +1077,8 @@ require('lazy').setup({
     main = 'nvim-treesitter.configs', -- Sets main module to use for opts
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
     opts = {
-      ensure_installed = {
-        'bash',
+      ensure_installed = { 
+        'bash', 
         'c',
         'diff',
         'html',
@@ -1162,76 +1091,25 @@ require('lazy').setup({
         'vimdoc',
         'javascript',
         'typescript',
+        'tsx',
+        'json',
+        'yaml',
+        'toml',
+        'sql',
+        'dockerfile',
+        'gitcommit',
+        'python',
+        'rust',
         'java',
         'kotlin',
-        'python',
+        'ruby',
+        'pymanifest'
       },
       -- Autoinstall languages that are not installed
       auto_install = true,
       highlight = {
         enable = true,
-        -- Some languages depend on vim's regex highlighting system (such as Ruby) for indent rules.
-        --  If you are experiencing weird indenting issues, add the language to
-        --  the list of additional_vim_regex_highlighting and disabled languages for indent.
-        additional_vim_regex_highlighting = { 'ruby' },
-      },
-      indent = { enable = true, disable = { 'ruby' } },
-    },
-    -- There are additional nvim-treesitter modules that you can use to interact
-    -- with nvim-treesitter. You should go explore a few and see what interests you:
-    --
-    --    - Incremental selection: Included, see `:help nvim-treesitter-incremental-selection-mod`
-    --    - Show your current context: https://github.com/nvim-treesitter/nvim-treesitter-context
-    --    - Treesitter + textobjects: https://github.com/nvim-treesitter/nvim-treesitter-textobjects
-  },
-
-  -- The following comments only work if you have downloaded the kickstart repo, not just copy pasted the
-  -- init.lua. If you want these files, they are in the repository, so you can just download them and
-  -- place them in the correct locations.
-
-  -- NOTE: Next step on your Neovim journey: Add/Configure additional plugins for Kickstart
-  --
-  --  Here are some example plugins that I've included in the Kickstart repository.
-  --  Uncomment any of the lines below to enable them (you will need to restart nvim).
-  --
-  require 'kickstart.plugins.debug',
-  -- require 'kickstart.plugins.indent_line',
-  require 'kickstart.plugins.lint',
-  require 'kickstart.plugins.autopairs',
-  -- require 'kickstart.plugins.neo-tree',
-  require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
-
-  -- NOTE: The import below can automatically add your own plugins, configuration, etc from `lua/custom/plugins/*.lua`
-  --    This is the easiest way to modularize your config.
-  --
-  --  Uncomment the following line and add your plugins to `lua/custom/plugins/*.lua` to get going.
-  { import = 'custom.plugins' },
-  --
-  -- For additional information with loading, sourcing and examples see `:help lazy.nvim-🔌-plugin-spec`
-  -- Or use telescope!
-  -- In normal mode type `<space>sh` then write `lazy.nvim-plugin`
-  -- you can continue same window with `<space>sr` which resumes last telescope search
-}, {
-  ui = {
-    -- If you are using a Nerd Font: set icons to an empty table which will use the
-    -- default lazy.nvim defined Nerd Font icons, otherwise define a unicode icons table
-    icons = vim.g.have_nerd_font and {} or {
-      cmd = '⌘',
-      config = '🛠',
-      event = '📅',
-      ft = '📂',
-      init = '⚙',
-      keys = '🗝',
-      plugin = '🔌',
-      runtime = '💻',
-      require = '🌙',
-      source = '📄',
-      start = '🚀',
-      task = '📌',
-      lazy = '💤 ',
-    },
+      }
+    }
   },
 })
-
--- The line beneath this is called `modeline`. See `:help modeline`
--- vim: ts=2 sts=2 sw=2 et
