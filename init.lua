@@ -246,7 +246,7 @@ rtp:prepend(lazypath)
 --    :Lazy update
 --
 -- NOTE: Here is where you install your plugins.
-require('lazy').setup({
+require('lazy').setup {
   -- NOTE: Plugins can be added with a link (or for a github repo: 'owner/repo' link).
   'NMAC427/guess-indent.nvim', -- Detect tabstop and shiftwidth automatically
   -- NOTE: Plugins can also be added by using a table,
@@ -379,7 +379,7 @@ require('lazy').setup({
       { 'nvim-telescope/telescope-ui-select.nvim' },
 
       -- Useful for getting pretty icons, but requires a Nerd Font.
-      -- { 'nvim-tree/nvim-web-devicons', enabled = vim.g.have_nerd_font },
+      { 'nvim-tree/nvim-web-devicons', enabled = vim.g.have_nerd_font },
     },
     config = function()
       -- Telescope is a fuzzy finder that comes with a lot of different things that
@@ -407,11 +407,16 @@ require('lazy').setup({
         -- You can put your default mappings / updates / etc. in here
         --  All the info you're looking for is in `:help telescope.setup()`
         --
-        -- defaults = {
-        --   mappings = {
-        --     i = { ['<c-enter>'] = 'to_fuzzy_refine' },
-        --   },
-        -- },
+        defaults = {
+          mappings = {
+            i = { ['<c-enter>'] = 'to_fuzzy_refine' },
+          },
+          layout_config = {
+            horizontal = {
+              prompt_position = 'top',
+            },
+          },
+        },
         -- pickers = {}
         extensions = {
           ['ui-select'] = {
@@ -574,36 +579,40 @@ require('lazy').setup({
 
           -- TypeScript specific keybindings
           -- These commands are available when using vtsls or ts_ls
-          if vim.bo[event.buf].filetype == 'typescript' or vim.bo[event.buf].filetype == 'typescriptreact'
-             or vim.bo[event.buf].filetype == 'javascript' or vim.bo[event.buf].filetype == 'javascriptreact' then
+          if
+            vim.bo[event.buf].filetype == 'typescript'
+            or vim.bo[event.buf].filetype == 'typescriptreact'
+            or vim.bo[event.buf].filetype == 'javascript'
+            or vim.bo[event.buf].filetype == 'javascriptreact'
+          then
             map('<leader>co', function()
-              vim.lsp.buf.code_action({
+              vim.lsp.buf.code_action {
                 apply = true,
                 context = {
                   only = { 'source.organizeImports' },
                   diagnostics = {},
                 },
-              })
+              }
             end, '[C]ode [O]rganize Imports')
 
             map('<leader>cR', function()
-              vim.lsp.buf.code_action({
+              vim.lsp.buf.code_action {
                 apply = true,
                 context = {
                   only = { 'source.removeUnused' },
                   diagnostics = {},
                 },
-              })
+              }
             end, '[C]ode [R]emove Unused Imports')
 
             map('<leader>cA', function()
-              vim.lsp.buf.code_action({
+              vim.lsp.buf.code_action {
                 apply = true,
                 context = {
                   only = { 'source.addMissingImports.ts' },
                   diagnostics = {},
                 },
-              })
+              }
             end, '[C]ode [A]dd Missing Imports')
           end
 
@@ -856,10 +865,10 @@ require('lazy').setup({
       formatters_by_ft = {
         lua = { 'stylua' },
         -- Conform can also run multiple formatters sequentially
-        python = { "isort", "black" },
+        python = { 'isort', 'black' },
         --
         -- You can use 'stop_after_first' to run the first available formatter from the list
-        javascript = { "prettierd", "prettier", stop_after_first = true },
+        javascript = { 'prettierd', 'prettier', stop_after_first = true },
       },
     },
   },
@@ -1074,11 +1083,11 @@ require('lazy').setup({
   { -- Highlight, edit, and navigate code
     'nvim-treesitter/nvim-treesitter',
     build = ':TSUpdate',
-    main = 'nvim-treesitter.configs', -- Sets main module to use for opts
+    main = 'nvim-treesitter.config', -- Sets main module to use for opts
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
     opts = {
-      ensure_installed = { 
-        'bash', 
+      ensure_installed = {
+        'bash',
         'c',
         'diff',
         'html',
@@ -1103,13 +1112,17 @@ require('lazy').setup({
         'java',
         'kotlin',
         'ruby',
-        'pymanifest'
+        'pymanifest',
+        'swift',
       },
       -- Autoinstall languages that are not installed
       auto_install = true,
       highlight = {
         enable = true,
-      }
-    }
+      },
+      indent = {
+        enable = true,
+      },
+    },
   },
-})
+}
